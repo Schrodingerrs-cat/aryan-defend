@@ -1,0 +1,33 @@
+{
+  "frames": 7974,
+  "duration_s": 266.0,
+  "map_fix_pct": 44.0,
+  "lost_pct": 54.5,
+  "longest_gap_s": 122.2,
+  "tag_frames": {
+    "1": 448,
+    "10": 1787,
+    "11": 92,
+    "2": 127,
+    "4": 319,
+    "5": 1276,
+    "6": 1274,
+    "7": 312,
+    "8": 289,
+    "9": 1221
+  },
+  "seen_but_unmapped": [],
+  "height": {
+    "tof_valid_pct": 49.1,
+    "tof_flagged_not_floor_pct": 62.2,
+    "tof_tag_bias_median_m": -0.643,
+    "jumps_over_30cm_raw": 656,
+    "jumps_over_30cm_output": 14,
+    "p95_step_cm_raw": 106.9,
+    "p95_step_cm_output": 5.4
+  },
+  "session": "20261024_094227",
+  "map": "../drone_deployment_infra/config/map.yaml",
+  "drone_calib": "tello_3",
+  "floor_y": -1.22
+}

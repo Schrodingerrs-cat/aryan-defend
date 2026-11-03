@@ -1,0 +1,207 @@
+diff --git a/simulation_infra/source/action_space_kit/action_space_kit/tasks/direct/tello_defend/curriculum_aryan.py b/simulation_infra/source/action_space_kit/action_space_kit/tasks/direct/tello_defend/curriculum_aryan.py
+new file mode 100644
+index 0000000..ac17733
+--- /dev/null
++++ b/simulation_infra/source/action_space_kit/action_space_kit/tasks/direct/tello_defend/curriculum_aryan.py
+@@ -0,0 +1,71 @@
++"""Aryan's curriculum ladder for AS-Defend-Live-v0 (selected with ``env.curriculum_set=aryan``).
++
++Every ``aryan_*`` policy in ``policies/`` was trained and scored on this table; see ``aryan_defend/docs/CURRICULUM.md``.
++The default table (``CURRICULUM`` in ``tello_defend_env_cfg.py``) is untouched.
++
++Stages 0-10  the ladder itself: stationary targets -> non-linear dodgers -> two attackers, ram take-downs ->
++             max-aggression attackers (7) -> realistic delayed/noisy feed, 3-4 attackers, defender losses (8-10).
++Stages 11-13 first bridge 7 -> 8 (own-state noise, then a mild feed, then the full feed). Collapsed at stage 12.
++Stages 14-17 second bridge: feed lag 0.05 -> 0.3 s with attacker difficulty 0.7 -> 1.0 ramped alongside.
++Physics: velocity model (fast) while the feed model is off, cascade firmware model once it is on.
++Attackers are non-linear and dodge from stage 2 on (``attacker_difficulty`` >= 0.5).
++"""
++
++NOISE = dict(feed_model=True, own_pos_noise=0.02, own_vel_noise=0.05)
++CLEAN = dict(feed_model=False, own_pos_noise=0.0, own_vel_noise=0.0)
++ARYAN_CURRICULUM: dict[int, dict] = {
++    # 0-1 stationary target, near then far, so the very first takedowns happen by chance
++    0: dict(active_attackers=[1, 1], attacker_difficulty=-1.0, attacker_speed=[0.0, 0.0], spawn_radius=2.0,
++            capture_mode="radius", capture_radius=0.8, defender_loss_prob=0.0, **CLEAN),
++    1: dict(active_attackers=[1, 1], attacker_difficulty=-1.0, attacker_speed=[0.0, 0.0], spawn_radius=3.5,
++            capture_mode="radius", capture_radius=0.7, defender_loss_prob=0.0, **CLEAN),
++    # 2-3 one attacker, non-linear + dodging
++    2: dict(active_attackers=[1, 1], attacker_difficulty=0.5, spawn_radius=4.5,
++            capture_mode="radius", capture_radius=0.6, defender_loss_prob=0.0, **CLEAN),
++    3: dict(active_attackers=[1, 2], attacker_difficulty=0.6, spawn_radius=5.0,
++            capture_mode="radius", capture_radius=0.5, defender_loss_prob=0.0, **CLEAN),
++    # 4-7 two attackers: coordination, then ram take-downs
++    4: dict(active_attackers=[2, 2], attacker_difficulty=0.7, spawn_radius=6.0,
++            capture_mode="radius", capture_radius=0.4, defender_loss_prob=0.0, **CLEAN),
++    5: dict(active_attackers=[2, 2], attacker_difficulty=0.85, spawn_radius=6.0,
++            capture_mode="radius", capture_radius=0.35, defender_loss_prob=0.0, **CLEAN),
++    6: dict(active_attackers=[2, 2], attacker_difficulty=0.85, spawn_radius=6.0,
++            capture_mode="ram", capture_radius=0.25, defender_loss_prob=0.0, **CLEAN),
++    7: dict(active_attackers=[2, 2], attacker_difficulty=1.0, spawn_radius=6.0,
++            capture_mode="ram", capture_radius=0.25, defender_loss_prob=0.0, **CLEAN),
++    # 8-10 realism: delayed noisy feed + firmware model, more attackers, defender losses
++    8: dict(active_attackers=[2, 3], attacker_difficulty=1.0, spawn_radius=6.0,
++            capture_mode="ram", capture_radius=0.25, defender_loss_prob=0.0, **NOISE),
++    9: dict(active_attackers=[2, 3], attacker_difficulty=1.0, spawn_radius=6.0,
++            capture_mode="ram", capture_radius=0.25, defender_loss_prob=0.2, **NOISE),
++    10: dict(active_attackers=[2, 4], attacker_difficulty=1.0, spawn_radius=6.0,
++             capture_mode="ram", capture_radius=0.25, defender_loss_prob=0.3, **NOISE),
++    # bridge stages 11-13 (local; run order 7 -> 11 -> 12 -> 13 -> 8 -> 9 -> 10): stage 7 -> 8 switches on feed lag, feed noise,
++    # dropout, own-state noise and a 3rd attacker at once, which collapsed takedowns to ~0.2/ep; add them one at a time
++    11: dict(active_attackers=[2, 2], attacker_difficulty=1.0, spawn_radius=6.0,
++             capture_mode="ram", capture_radius=0.25, defender_loss_prob=0.0,
++             feed_model=False, own_pos_noise=0.02, own_vel_noise=0.05),
++    12: dict(active_attackers=[2, 2], attacker_difficulty=1.0, spawn_radius=6.0,
++             capture_mode="ram", capture_radius=0.25, defender_loss_prob=0.0,
++             feed_model=True, feed_delay_s=[0.0, 0.1], feed_noise=0.01, feed_dropout=0.03,
++             own_pos_noise=0.02, own_vel_noise=0.05),
++    13: dict(active_attackers=[2, 2], attacker_difficulty=1.0, spawn_radius=6.0,
++             capture_mode="ram", capture_radius=0.25, defender_loss_prob=0.0, **NOISE),
++    # feed-severity ramp 14-17 (2 attackers, difficulty 1.0): 11-13 jumped from a perfect feed to lag+noise+dropout and the
++    # policies collapsed (5.9 -> 0.5 takedowns/ep). Lag is the killer (a 1-3 m/s dodger moves 0.3-1 m in 0.1-0.3 s), so
++    # grow it 0.05 -> 0.1 -> 0.2 -> 0.3 s with noise/dropout alongside, and ease attacker aggression back in (difficulty 0.7 -> 0.8 -> 0.9 -> 1.0) so the two hardships don't land together; run order 7 -> 14 -> 15 -> 16 -> 17 -> 8 -> 9 -> 10
++    14: dict(active_attackers=[2, 2], attacker_difficulty=0.7, spawn_radius=6.0,
++             capture_mode="ram", capture_radius=0.25, defender_loss_prob=0.0,
++             feed_model=True, feed_delay_s=[0.0, 0.05], feed_noise=0.005, feed_dropout=0.0,
++             own_pos_noise=0.02, own_vel_noise=0.05),
++    15: dict(active_attackers=[2, 2], attacker_difficulty=0.8, spawn_radius=6.0,
++             capture_mode="ram", capture_radius=0.25, defender_loss_prob=0.0,
++             feed_model=True, feed_delay_s=[0.0, 0.1], feed_noise=0.01, feed_dropout=0.03,
++             own_pos_noise=0.02, own_vel_noise=0.05),
++    16: dict(active_attackers=[2, 2], attacker_difficulty=0.9, spawn_radius=6.0,
++             capture_mode="ram", capture_radius=0.25, defender_loss_prob=0.0,
++             feed_model=True, feed_delay_s=[0.0, 0.2], feed_noise=0.02, feed_dropout=0.06,
++             own_pos_noise=0.02, own_vel_noise=0.05),
++    17: dict(active_attackers=[2, 2], attacker_difficulty=1.0, spawn_radius=6.0,
++             capture_mode="ram", capture_radius=0.25, defender_loss_prob=0.0, **NOISE),
++}
+diff --git a/simulation_infra/source/action_space_kit/action_space_kit/tasks/direct/tello_defend/tello_defend_env.py b/simulation_infra/source/action_space_kit/action_space_kit/tasks/direct/tello_defend/tello_defend_env.py
+index 5a3f5e5..489870a 100644
+--- a/simulation_infra/source/action_space_kit/action_space_kit/tasks/direct/tello_defend/tello_defend_env.py
++++ b/simulation_infra/source/action_space_kit/action_space_kit/tasks/direct/tello_defend/tello_defend_env.py
+@@ -393,7 +393,9 @@ class TelloDefendEnv(TerminalObservationMixin, DirectMARLEnv):
+                     ]
+             parts += [rel_pos.reshape(self.num_envs, -1), rel_vel.reshape(self.num_envs, -1), valid.squeeze(-1)]
+             obs[f"defender_{i}"] = torch.cat(parts, dim=-1)
+-        return obs
++        # A physics glitch can leave a drone with a huge or non-finite state; unbounded own pos/vel went straight into
++        # the network and turned the weights NaN (all early runs, ~iteration 110-140). Bound the input.
++        return {k: torch.nan_to_num(v, nan=0.0, posinf=0.0, neginf=0.0).clamp(-20.0, 20.0) for k, v in obs.items()}
+ 
+     # -- events (once per policy step, from _get_dones) ---------------------------
+ 
+@@ -558,13 +560,17 @@ class TelloDefendEnv(TerminalObservationMixin, DirectMARLEnv):
+         return terms
+ 
+     def _sparse_terms(self) -> dict[str, torch.Tensor]:
+-        D = self.cfg.num_defenders
++        cfg = self.cfg
++        D = cfg.num_defenders
+         ones = torch.ones(self.num_envs, D, device=self.device)
++        any_alive = self._attacker_alive.any(-1).float().unsqueeze(-1)
+         return {
+-            "capture": self._captured.float().sum(-1, keepdim=True) * ones,  # team reward
+-            "cleared": 0.5 * self._cleared.float().unsqueeze(-1) * ones,
+-            "breach": -1.0 * self._breached.float().unsqueeze(-1) * ones,
+-            "crash": -0.5 * self._lost_now.float(),
++            "capture": cfg.sp_capture_team * self._captured.float().sum(-1, keepdim=True) * ones,  # team reward
++            "capture_own": cfg.sp_capture_own * self._def_credit,  # extra to the defender that made the take-down
++            "cleared": cfg.sp_cleared * self._cleared.float().unsqueeze(-1) * ones,
++            "breach": cfg.sp_breach * self._breached.float().unsqueeze(-1) * ones,
++            "crash": cfg.sp_crash * self._lost_now.float(),
++            "time": cfg.sp_time * self.step_dt * any_alive * ones,  # per second while an attacker is alive
+         }
+ 
+     def _get_rewards(self) -> dict[str, torch.Tensor]:
+@@ -579,7 +585,7 @@ class TelloDefendEnv(TerminalObservationMixin, DirectMARLEnv):
+             raise ValueError(f"unknown reward_mode {mode!r}")
+         self._closing_blackout = (self._closing_blackout - 1).clamp(min=0)
+ 
+-        total = sum(terms.values())  # (E, D)
++        total = torch.nan_to_num(sum(terms.values()), nan=0.0, posinf=0.0, neginf=0.0)  # (E, D)
+         for k, v in terms.items():
+             if k not in self._ep_terms:
+                 self._ep_terms[k] = torch.zeros(self.num_envs, device=self.device)
+@@ -621,7 +627,24 @@ class TelloDefendEnv(TerminalObservationMixin, DirectMARLEnv):
+         log["Curriculum/difficulty"] = torch.tensor(float(-1 if self.cfg.attacker_difficulty is None else self.cfg.attacker_difficulty))
+         self.extras["log"] = log
+ 
++    def _blown_up(self) -> torch.Tensor:
++        """(E,) envs where a drone's state is non-finite or absurdly fast (a physics blow-up)."""
++        def_pos, def_vel = self._def_stack("root_pos_w"), self._def_stack("root_lin_vel_w")
++        att_pos, att_vel = self._attacker_states()
++        alive = self._attacker_alive
++        ok = torch.isfinite(def_pos).all(-1).all(-1) & torch.isfinite(def_vel).all(-1).all(-1)
++        ok &= (torch.isfinite(att_pos).all(-1) | ~alive).all(-1) & (torch.isfinite(att_vel).all(-1) | ~alive).all(-1)
++        fast = (def_vel.norm(dim=-1) > 15.0).any(-1) | ((att_vel.norm(dim=-1) > 15.0) & alive).any(-1)
++        bad = ~ok | fast
++        n = int(bad.sum())
++        if n:
++            self._blowups = getattr(self, "_blowups", 0) + n
++            if self._blowups <= 20 or self._blowups % 200 == 0:
++                print(f"[guard] reset {n} env(s) with a blown-up drone state (total {self._blowups})", flush=True)
++        return bad
++
+     def _get_dones(self) -> tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]:
++        blown = self._blown_up()
+         self._step_events()
+         time_out = self.episode_length_buf >= self.max_episode_length - 1
+         all_def_down = ~self._defender_alive.any(dim=-1)
+@@ -634,6 +657,7 @@ class TelloDefendEnv(TerminalObservationMixin, DirectMARLEnv):
+             done = self._breached | all_def_down
+         else:
+             done = self._breached | all_down | all_def_down
++        done = done | blown
+         finished = done | time_out
+         self._terminated = done
+         self._finished = finished
+diff --git a/simulation_infra/source/action_space_kit/action_space_kit/tasks/direct/tello_defend/tello_defend_env_cfg.py b/simulation_infra/source/action_space_kit/action_space_kit/tasks/direct/tello_defend/tello_defend_env_cfg.py
+index f6882de..bd25f76 100644
+--- a/simulation_infra/source/action_space_kit/action_space_kit/tasks/direct/tello_defend/tello_defend_env_cfg.py
++++ b/simulation_infra/source/action_space_kit/action_space_kit/tasks/direct/tello_defend/tello_defend_env_cfg.py
+@@ -158,10 +158,19 @@ class TelloDefendEnvCfg(DirectMARLEnvCfg):
+     shaping_scale = 1.0  # multiplies the dense shaping; anneal towards 0 along the curriculum
+     shaping_gamma = 1.0  # 1.0 = pure telescoping closing. <1 pays (1-gamma)*distance per step for standing still far away (measured: +54/episode at stage 0)
+     rew_scale_crash = -10.0
++    # sparse mode (reward_mode="sparse"); the defaults reproduce the original hardcoded values
++    sp_capture_team = 1.0  # to every defender per take-down
++    sp_capture_own = 0.0  # extra to the defender that made it
++    sp_cleared = 0.5  # whole wave down
++    sp_breach = -1.0  # an attacker reached the site
++    sp_crash = -0.5  # own defender crashed
++    sp_time = 0.0  # per second while any attacker is alive (negative = hurry)
+     rew_scale_separation = -2.0  # per second, times (separation_radius - distance)
+ 
+     # - curriculum
+     curriculum_stage: int = -1
++    curriculum_set: str = "default"
++    """Which stage table ``curriculum_stage`` indexes: ``default`` (CURRICULUM below) or ``aryan`` (curriculum_aryan.py)."""
+     """-1 = off. Else apply a preset from CURRICULUM (see below) at env construction. It OVERRIDES the fields it sets, and the
+     physics: stages 0-3 = velocity model at 120 Hz (fast), 4-6 = cascade firmware model at 500 Hz (realistic)."""
+     physics_preset = "auto"
+@@ -234,7 +243,25 @@ FAST_DR = dict(fast_response_time=[0.22, 0.32], fast_max_accel=[2.0, 4.5], fast_
+                fast_max_accel_z=[3.5, 8.0], fast_latency_steps=[0, 1, 2])
+ 
+ 
++def _aryan_physics(cfg, table: dict, stage: int) -> None:
++    """Aryan set: firmware (cascade) model exactly when the realistic feed is on, else the fast velocity model."""
++    phys = REAL_PHYSICS if table[stage].get("feed_model", False) else FAST_PHYSICS
++    cfg.dynamics_model = phys["dynamics_model"]
++    cfg.sim.dt = phys["dt"]
++    cfg.decimation = phys["decimation"]
++    cfg.sim.render_interval = phys["decimation"]
++
++
+ def apply_curriculum(cfg, stage: int) -> None:
++    if getattr(cfg, "curriculum_set", "default") == "aryan":
++        from .curriculum_aryan import ARYAN_CURRICULUM
++
++        for k, v in ARYAN_CURRICULUM[stage].items():
++            setattr(cfg, k, v)
++        _aryan_physics(cfg, ARYAN_CURRICULUM, stage)
++        if cfg.arena_radius is not None:
++            cfg.arena_radius = max(cfg.arena_radius, cfg.spawn_radius + 3.0)
++        return
+     for k, v in CURRICULUM[stage].items():
+         setattr(cfg, k, v)
+     preset = getattr(cfg, "physics_preset", "auto")

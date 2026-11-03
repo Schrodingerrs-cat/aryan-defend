@@ -1,0 +1,21 @@
+{
+  "script": "tello_keys.py",
+  "speed": 40,
+  "hold": 0.4,
+  "trim_step": 2,
+  "initial_trim": [
+    0,
+    0,
+    0,
+    0
+  ],
+  "frames": 393,
+  "pose": 182,
+  "start_time": 1792816700.9628377,
+  "start_iso": "2026-10-24T00:38:20",
+  "end_time": 1792816716.6781912,
+  "duration_s": 15.72,
+  "dropped_frames": 0,
+  "cmds": 25,
+  "imu": 136
+}

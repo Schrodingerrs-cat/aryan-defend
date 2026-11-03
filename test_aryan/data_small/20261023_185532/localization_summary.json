@@ -1,0 +1,31 @@
+{
+  "session": "20261023_185532",
+  "drone_calib": "tello_3",
+  "stride": 3,
+  "frames_in_csv": 902,
+  "frames_processed": 301,
+  "duration_s": 30.6,
+  "frames_with_any_tag": 198,
+  "frames_with_map_fix": 119,
+  "map_fix_pct": 39.5,
+  "lost_pct": 60.5,
+  "longest_gap_without_fix_s": 18.7,
+  "tag_frames": {
+    "6": 119,
+    "7": 133
+  },
+  "mapped_tags": [
+    4,
+    6,
+    10
+  ],
+  "seen_but_unmapped": [
+    7
+  ],
+  "tag_windows_s": [
+    [
+      9.1,
+      30.6
+    ]
+  ]
+}

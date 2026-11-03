@@ -1,0 +1,5 @@
+time,event,key,lr,fb,ud,yaw,intent_lr,intent_fb,intent_ud,intent_yaw,trim_lr,trim_fb,trim_yaw,flying,note
+1792812713.9455462,start,,,,,,,,,,0,0,0,0,
+1792812726.7388833,takeoff_refused,t,,,,,,,,,0,0,0,0,battery=18.0
+1792812732.222569,takeoff_refused,t,,,,,,,,,0,0,0,0,battery=17.0
+1792812737.135975,stop,,,,,,,,,,0,0,0,0,

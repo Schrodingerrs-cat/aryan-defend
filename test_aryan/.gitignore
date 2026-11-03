@@ -1,0 +1,6 @@
+# recordings and per-flight outputs stay on the machine that flew (tens of GB)
+data/
+__pycache__/
+*.bak
+*.yaml.bak
+trim*.json

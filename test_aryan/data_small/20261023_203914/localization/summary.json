@@ -1,0 +1,33 @@
+{
+  "frames": 4284,
+  "duration_s": 148.1,
+  "map_fix_pct": 63.0,
+  "lost_pct": 24.2,
+  "longest_gap_s": 24.1,
+  "tag_frames": {
+    "10": 577,
+    "4": 603,
+    "5": 829,
+    "6": 202,
+    "7": 442,
+    "8": 708,
+    "9": 286
+  },
+  "seen_but_unmapped": [
+    6,
+    9
+  ],
+  "height": {
+    "tof_valid_pct": 1.4,
+    "tof_flagged_not_floor_pct": 0.0,
+    "tof_tag_bias_median_m": null,
+    "jumps_over_30cm_raw": 218,
+    "jumps_over_30cm_output": 3,
+    "p95_step_cm_raw": 44.2,
+    "p95_step_cm_output": 4.6
+  },
+  "session": "20261023_203914",
+  "map": "/home/aryans-cat/Documents/GitHub/team4/test_aryan/maps/latest_layout.yaml",
+  "drone_calib": "tello_3",
+  "floor_y": -1.22
+}
