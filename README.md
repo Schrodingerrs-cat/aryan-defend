@@ -1,4 +1,6 @@
-# aryan-defend
+# counter-uas-rl-defender-policy
+
+Counter-UAS reinforcement-learning defender policy: 3 defender drones vs 2+ attacker drones (sparse-reward curriculum MAPPO, Isaac Lab sim, DJI Tello).
 
 Aryan's work on the Action Space anti-drone hackathon, task 3 (3 defender Tellos vs 2+ attackers): sparse-reward + curriculum MAPPO training on the
 Turing cluster, the trained policies, results, videos, and the single-Tello localisation scripts (`test_aryan`).
@@ -27,9 +29,9 @@ Met on the clean-feed stage, not on the realistic stages. `aryan_defend/docs/LES
 ```bash
 git clone git@github.com:adityapat958/action-space-hackathon.git && cd action-space-hackathon
 git checkout 8068f1c                                   # the main commit this was built on
-git apply ../aryan-defend/sim_patch/aryan-sim-changes.patch   # adds sp_* knobs, NaN guards, curriculum_set=aryan (+ curriculum_aryan.py)
-cp -r ../aryan-defend/aryan_defend ../aryan-defend/test_aryan .
-cp -r ../aryan-defend/policies/aryan_* policies/
+git apply ../counter-uas-rl-defender-policy/sim_patch/aryan-sim-changes.patch   # adds sp_* knobs, NaN guards, curriculum_set=aryan (+ curriculum_aryan.py)
+cp -r ../counter-uas-rl-defender-policy/aryan_defend ../counter-uas-rl-defender-policy/test_aryan .
+cp -r ../counter-uas-rl-defender-policy/policies/aryan_* policies/
 ```
 Then follow `aryan_defend/docs/RUNBOOK.md`. To deploy a policy: `policies/<name>/policy.npz` loads with `drone_deployment_infra/defend_live.py --policy rl`
 (the `s7_*` policies assume a clean attacker feed; use `s9_g3` or `s17_o3` for the real tracker feed).
